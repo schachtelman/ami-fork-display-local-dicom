@@ -37,14 +37,12 @@ window.addEventListener("resize", onWindowResize, false);
 var local_files = [];
 // load local dicom files
 var pullfiles = function() {
-  // love the query selector
   var fileInput = document.querySelector("#fileItem");
   var filesInput = fileInput.files;
 
   // convert files object to an array
-
   for (var i = 0; i < filesInput.length; i++) {
-    // we need to access the files via a Data URL
+    // we need to access the files via a Object URL
     local_files.push(window.URL.createObjectURL(filesInput[i]));
   }
 
@@ -56,13 +54,14 @@ var pullfiles = function() {
       const stack = series[0].stack[0];
       loader.free();
 
-      // prepare the stack (computes some orientation information etc..)
+      // prepare the stack (should compute some orientation information etc..)
       stack.prepare();
       // log some metadata
       console.log(stack.dimensionsIJK);
       console.log(stack.origin);
 
       // getPixelData(stack, coordinate) in core.utils should give value at coord
+      // this is just for demonstration purposes
       var coord = new THREE.Vector3(0, 0, 0);
       var pixelData = AMI.UtilsCore.getPixelData(stack, coord);
       console.log(pixelData);
@@ -173,6 +172,7 @@ var downloadAsNRRD = function(stack) {
   for (let z = 0; z < volume_dim2; z += 1) {
     for (let y = 0; y < volume_dim1; y++) {
       for (let x = 0; x < volume_dim0; x++) {
+        // https://github.com/FNNDSC/ami/blob/master/src/core/core.utils.js
         var coord = new THREE.Vector3(x, y, z);
         data[j] = AMI.UtilsCore.getPixelData(stack, coord);
         j++;
@@ -184,6 +184,9 @@ var downloadAsNRRD = function(stack) {
   }
 
   let encoding_type = "text";
+
+  // compression is disabled for now, since in this POC we use the
+  // original version of nrrd-js, which does not support compression yet
   //let compressed = document.getElementById("compressed").checked;
   //if (compressed) {
   //  console.log("Compressed!");
@@ -200,21 +203,27 @@ var downloadAsNRRD = function(stack) {
   };
   let spaceOrigin = [];
 
+  // TODO: we still need to find a way to get the proper origin here...
+  // http://teem.sourceforge.net/nrrd/format.html#space
   for (let i = 0; i < 3; i += 1) {
     //spaceOrigin[i] = parseFloat(stack.origin[i]);
     spaceOrigin[i] = 0.0;
   }
 
+  // TODO: as well as the proper directions and space...
   //testData.spaceDirections = volume.directions;
   testData.spaceOrigin = spaceOrigin;
   testData.space = "left-posterior-superior";
+
   console.log(testData);
   console.log("Serializing...");
-  //fs.writeFileSync('example3.nrrd', new Buffer(new Uint8Array(nrrd.serialize(testData))));
+
   var nrrdData = new Buffer(new Uint8Array(nrrd.serialize(testData)));
+
   downloadVolume(nrrdData, false, "volume.nrrd");
 };
 
+// download the nrrd file
 function downloadVolume(nrrd, compressed, filename) {
   let a = window.document.createElement("a");
   if (compressed) {
@@ -230,21 +239,24 @@ function downloadVolume(nrrd, compressed, filename) {
 }
 
 // from: http://jsfiddle.net/UselessCode/qm5AG/
-let vtk_file = null,
+// create file blob to download
+// since we use text-encoding for the NRRD we can encode the blob as text as well
+let text_file = null,
   makeTextFile = function(text) {
     let data = new Blob([text], { type: "text/plain" });
 
     // If we are replacing a previously generated file we need to
     // manually revoke the object URL to avoid memory leaks.
-    if (vtk_file !== null) {
-      window.URL.revokeObjectURL(vtk_file);
+    if (text_file !== null) {
+      window.URL.revokeObjectURL(text_file);
     }
 
-    vtk_file = window.URL.createObjectURL(data);
+    text_file = window.URL.createObjectURL(data);
 
-    return vtk_file;
+    return text_file;
   };
 
+// if we later want to use compression we need to encode the blob as a binary file
 let binary_file = null,
   makeBinaryFile = function(data) {
     let content = new Blob([data], { type: "octet/stream" });
