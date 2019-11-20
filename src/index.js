@@ -13,10 +13,10 @@ container.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
 
 const camera = new THREE.PerspectiveCamera(
-  45,
+  60,
   container.offsetWidth / container.offsetHeight,
   0.1,
-  1000
+  10000
 );
 camera.position.x = 150;
 camera.position.y = 150;
@@ -54,6 +54,11 @@ var pullfiles = function() {
       const series = loader.data[0].mergeSeries(loader.data);
       const stack = series[0].stack[0];
       loader.free();
+
+      // log some metadata
+      console.log(stack.stackID);
+
+      // getPixelData(stack, coordinate) in core.utils should give value at coord
 
       const stackHelper = new AMI.StackHelper(stack);
       stackHelper.bbox.color = colors.red;
