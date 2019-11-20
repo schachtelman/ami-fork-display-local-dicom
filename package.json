@@ -1,7 +1,7 @@
 {
-  "name": "ami-lesson-01",
+  "name": "dicom-to-nrrd-poc",
   "version": "1.0.0",
-  "description": "Visualiza DICOM in 3D",
+  "description": "Visualiza DICOM in 3D and convert to NRRD file",
   "main": "index.html",
   "scripts": {
     "start": "parcel index.html --open"
