@@ -1,7 +1,10 @@
 import { colors, files } from "./utils";
 var nrrd = require("nrrd-js");
 
+// ###############################################
 // Classic ThreeJS setup
+// ###############################################
+
 const container = document.getElementById("container");
 const renderer = new THREE.WebGLRenderer({
   antialias: true
@@ -34,8 +37,11 @@ const onWindowResize = () => {
 
 window.addEventListener("resize", onWindowResize, false);
 
+// ###############################################
+// Load local dicom files
+// ###############################################
+
 var local_files = [];
-// load local dicom files
 var pullfiles = function() {
   var fileInput = document.querySelector("#fileItem");
   var filesInput = fileInput.files;
@@ -159,7 +165,10 @@ var pullfiles = function() {
 
 document.querySelector("#fileItem").onchange = pullfiles;
 
-// download as NRRD
+// ###############################################
+// Combine and download as NRRD
+// ###############################################
+
 var downloadAsNRRD = function(stack) {
   let volume_dim0 = stack.dimensionsIJK.x;
   let volume_dim1 = stack.dimensionsIJK.y;
