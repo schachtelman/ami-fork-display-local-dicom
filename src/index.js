@@ -55,10 +55,15 @@ var pullfiles = function() {
       const stack = series[0].stack[0];
       loader.free();
 
+      // prepare the stack (computes some orientation information etc..)
+      stack.prepare();
       // log some metadata
-      console.log(stack.stackID);
+      console.log(stack.dimensionsIJK);
 
       // getPixelData(stack, coordinate) in core.utils should give value at coord
+      var coord = new THREE.Vector3(0, 0, 0);
+      var pixelData = AMI.UtilsCore.getPixelData(stack, coord);
+      console.log(pixelData);
 
       const stackHelper = new AMI.StackHelper(stack);
       stackHelper.bbox.color = colors.red;
