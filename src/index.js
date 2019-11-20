@@ -1,4 +1,5 @@
 import { colors, files } from "./utils";
+var nrrd = require("nrrd-js");
 
 // Classic ThreeJS setup
 const container = document.getElementById("container");
@@ -59,6 +60,7 @@ var pullfiles = function() {
       stack.prepare();
       // log some metadata
       console.log(stack.dimensionsIJK);
+      console.log(stack.origin);
 
       // getPixelData(stack, coordinate) in core.utils should give value at coord
       var coord = new THREE.Vector3(0, 0, 0);
@@ -82,7 +84,7 @@ var pullfiles = function() {
     })
     .catch(error => {
       window.console.log("oops... something went wrong...");
-      window.console.log(error);
+      window.console.log(error.message);
     });
 
   const animate = () => {
@@ -151,7 +153,109 @@ var pullfiles = function() {
     borderFolder.add(stackHelper.border, "visible");
     borderFolder.addColor(stackHelper.border, "color");
     borderFolder.open();
+
+    downloadAsNRRD(stack);
   };
 };
 
 document.querySelector("#fileItem").onchange = pullfiles;
+
+// download as NRRD
+var downloadAsNRRD = function(stack) {
+  let volume_dim0 = stack.dimensionsIJK.x;
+  let volume_dim1 = stack.dimensionsIJK.y;
+  let volume_dim2 = stack.dimensionsIJK.z;
+
+  let size = volume_dim0 * volume_dim1 * volume_dim2;
+  console.log("Writing to data array...");
+  let data = [];
+  let j = 0;
+  for (let z = 0; z < volume_dim2; z += 1) {
+    for (let y = 0; y < volume_dim1; y++) {
+      for (let x = 0; x < volume_dim0; x++) {
+        var coord = new THREE.Vector3(x, y, z);
+        data[j] = AMI.UtilsCore.getPixelData(stack, coord);
+        j++;
+        if (j % 100000 === 0) {
+          console.log((j / size) * 100);
+        }
+      }
+    }
+  }
+
+  let encoding_type = "text";
+  //let compressed = document.getElementById("compressed").checked;
+  //if (compressed) {
+  //  console.log("Compressed!");
+  //  encoding_type = 'gzip';
+  //}
+
+  var testData = {
+    data: data,
+    type: "float",
+    endian: "little",
+    encoding: encoding_type,
+    kinds: ["domain", "domain", "domain"],
+    sizes: [stack.dimensionsIJK.x, stack.dimensionsIJK.y, stack.dimensionsIJK.z]
+  };
+  let spaceOrigin = [];
+
+  for (let i = 0; i < 3; i += 1) {
+    //spaceOrigin[i] = parseFloat(stack.origin[i]);
+    spaceOrigin[i] = 0.0;
+  }
+
+  //testData.spaceDirections = volume.directions;
+  testData.spaceOrigin = spaceOrigin;
+  testData.space = "left-posterior-superior";
+  console.log(testData);
+  console.log("Serializing...");
+  //fs.writeFileSync('example3.nrrd', new Buffer(new Uint8Array(nrrd.serialize(testData))));
+  var nrrdData = new Buffer(new Uint8Array(nrrd.serialize(testData)));
+  downloadVolume(nrrdData, false, "volume.nrrd");
+};
+
+function downloadVolume(nrrd, compressed, filename) {
+  let a = window.document.createElement("a");
+  if (compressed) {
+    a.href = makeBinaryFile(nrrd);
+  } else {
+    nrrd = new String(nrrd);
+    a.href = makeTextFile(nrrd);
+  }
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+// from: http://jsfiddle.net/UselessCode/qm5AG/
+let vtk_file = null,
+  makeTextFile = function(text) {
+    let data = new Blob([text], { type: "text/plain" });
+
+    // If we are replacing a previously generated file we need to
+    // manually revoke the object URL to avoid memory leaks.
+    if (vtk_file !== null) {
+      window.URL.revokeObjectURL(vtk_file);
+    }
+
+    vtk_file = window.URL.createObjectURL(data);
+
+    return vtk_file;
+  };
+
+let binary_file = null,
+  makeBinaryFile = function(data) {
+    let content = new Blob([data], { type: "octet/stream" });
+
+    // If we are replacing a previously generated file we need to
+    // manually revoke the object URL to avoid memory leaks.
+    if (binary_file !== null) {
+      window.URL.revokeObjectURL(binary_file);
+    }
+
+    binary_file = window.URL.createObjectURL(content);
+
+    return binary_file;
+  };
